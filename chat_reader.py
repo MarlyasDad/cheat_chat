@@ -3,38 +3,45 @@ import argparse
 from datetime import datetime
 import aiofiles
 
-m = argparse.ArgumentParser(description="Скрипт для чтения сообщений из чата",
-                            prog="chat_reader")
 
-m.add_argument("--host", type=str, default="minechat.dvmn.org",
-               help="Хост для подключения")
-m.add_argument("--port", type=int, default=5000,
-               help="Порт для подключения")
-m.add_argument("--history", type=str,
-               help="Путь к файлу лога", default="./chat_log.txt")
+def read_arguments():
+    arguments_parser = argparse.ArgumentParser(
+        description="Скрипт для чтения сообщений из чата",
+        prog="chat_reader")
 
-arguments = m.parse_args()
+    arguments_parser.add_argument("--host", type=str,
+                                  help="Хост для подключения",
+                                  default="minechat.dvmn.org")
+    arguments_parser.add_argument("--port", type=int,
+                                  help="Порт для подключения",
+                                  default=5000)
+    arguments_parser.add_argument("--history", type=str,
+                                  help="Путь к файлу лога",
+                                  default="./chat_log.txt")
+
+    return arguments_parser.parse_args()
 
 
-async def chat_client_reader(options: argparse.Namespace):
-    reader, writer = await asyncio.open_connection(options.host, options.port)
+async def main(host: str, port: int, history: str):
+    reader, writer = await asyncio.open_connection(host, port)
 
     try:
         while True:
-            data = await reader.readline()
+            incoming_message = await reader.readline()
             received_at = datetime.now().strftime("%H:%m:%S %d-%m-%Y")
-            message = f"[{received_at}] {data.decode()!s}"
-            print(message, end="")
+            prepared_message = f"[{received_at}] {incoming_message.decode()!s}"
+            print(prepared_message, end="")
 
-            async with aiofiles.open(options.history, mode="a") as f:
-                await f.write(message)
+            async with aiofiles.open(history, mode="a") as f:
+                await f.write(prepared_message)
     except KeyboardInterrupt:
         print("CTRL-C")
     finally:
-        print('Close the connection')
+        print("Close the connection")
         writer.close()
         await writer.wait_closed()
 
 
 if __name__ == "__main__":
-    asyncio.run(chat_client_reader(arguments))
+    arguments = read_arguments()
+    asyncio.run(main(arguments.host, arguments.port, arguments.history))

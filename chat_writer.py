@@ -5,39 +5,52 @@ import json
 import aiofiles
 
 
-m = argparse.ArgumentParser(description="Скрипт для отправки сообщений в чат",
-                            prog="chat_writer")
+def read_arguments():
+    arguments_parser = argparse.ArgumentParser(
+        description="Скрипт для чтения сообщений из чата",
+        prog="chat_reader")
 
-m.add_argument("--host", type=str, default="minechat.dvmn.org",
-               help="Хост для подключения")
-m.add_argument("--port", type=int, default=5050,
-               help="Порт для подключения")
-m.add_argument("--history", type=str,
-               help="Путь к файлу лога", default="./chat_log.txt")
-m.add_argument("--token", type=str,
-               help="Путь к файлу с токеном", default="./chat_token.txt")
-m.add_argument("--nickname", type=str,
-               help="Имя пользователя для регистрации", default="Anonymous")
-m.add_argument("--message", type=str, required=True,
-               help="Сообщение для отправки")
+    arguments_parser.add_argument("--host", type=str,
+                                  help="Хост для подключения",
+                                  default="minechat.dvmn.org")
+    arguments_parser.add_argument("--port", type=int,
+                                  help="Порт для подключения",
+                                  default=5050)
+    arguments_parser.add_argument("--history", type=str,
+                                  help="Путь к файлу лога",
+                                  default="./chat_log.txt")
+    arguments_parser.add_argument("--nickname", type=str,
+                                  help="Имя пользователя для регистрации",
+                                  default="Anonymous")
+    arguments_parser.add_argument("--message", type=str,
+                                  help="Сообщение для отправки",
+                                  required=True)
 
-arguments = m.parse_args()
-
-logging.basicConfig(format=u"%(levelname)-8s [%(asctime)s] %(message)s",
-                    level=logging.DEBUG,
-                    filemode="a",
-                    filename=arguments.history)
+    return arguments_parser.parse_args()
 
 
-async def authorise(options, reader, writer) -> bool:
+def setup_logger(log_filename):
+    new_logger = logging.getLogger()
+    new_logger.setLevel(logging.DEBUG)
+
+    file_handler = logging.FileHandler(log_filename, mode="a")
+    formatter = logging.Formatter("[%(asctime)s] - %(name)s - %(levelname)s "
+                                  "- %(message)s")
+    file_handler.setFormatter(formatter)
+    new_logger.addHandler(file_handler)
+    return new_logger
+
+
+async def authorize(reader, writer, logger) -> bool:
     try:
-        async with aiofiles.open(options.token, mode="r") as f:
+        async with aiofiles.open("chat_token.txt", mode="r") as f:
             chat_token = await f.read()
     except FileNotFoundError:
         chat_token = None
 
-    logging.debug(await reader.readline())
+    logger.debug(str(await reader.readline()))
     writer.write(f"{chat_token}\n".encode())
+    await writer.drain()
 
     login_response = await reader.readline()
     try:
@@ -52,31 +65,36 @@ async def authorise(options, reader, writer) -> bool:
     return True
 
 
-async def register(options, reader, writer) -> None:
-    nickname = options.nickname.replace("\n", "")
-    writer.write(f"{nickname}\n".encode())
-    credentials_response = await reader.readline()
-    user_credentials = json.loads(credentials_response)
-    async with aiofiles.open(options.token, mode="w") as f:
-        await f.write(user_credentials["account_hash"])
+async def register(reader, writer, nickname) -> None:
+    prepared_nickname = nickname.replace("\n", "")
+    writer.write(f"{prepared_nickname}\n".encode())
+    await writer.drain()
+    credentials_content = await reader.readline()
+    access_credentials = json.loads(credentials_content)
+    async with aiofiles.open("chat_token.txt", mode="w") as f:
+        await f.write(access_credentials["account_hash"])
 
 
 async def submit_message(writer, message):
-    message = message.replace("\n", "")
-    writer.write(f"{message}\n\n".encode())
+    prepared_message = message.replace("\n", "")
+    writer.write(f"{prepared_message}\n\n".encode())
     await writer.drain()
 
 
-async def chat_client_writer(options: argparse.Namespace):
-    reader, writer = await asyncio.open_connection(options.host, options.port)
+async def main(host: str, port: int, nickname: str, message: str,
+               logger: logging.Logger):
+    reader, writer = await asyncio.open_connection(host, port)
 
-    authorized: bool = await authorise(options, reader, writer)
+    authorized: bool = await authorize(reader, writer, logger)
 
     if not authorized:
-        await register(options, reader, writer)
+        await register(reader, writer, nickname)
 
-    await submit_message(writer, options.message)
+    await submit_message(writer, message)
 
 
 if __name__ == "__main__":
-    asyncio.run(chat_client_writer(arguments))
+    arguments = read_arguments()
+    root_logger = setup_logger(arguments.history)
+    asyncio.run(main(arguments.host, arguments.port, arguments.nickname,
+                     arguments.message, root_logger))

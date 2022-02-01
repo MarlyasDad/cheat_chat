@@ -39,7 +39,6 @@ $ python3 chat_writer.py --message "Hi it's me"
 --host minechat.dvmn.org (хост для подключения)
 --port 5050 (порт для подключения)
 --history chat_log.txt (путь к файлу для записи чата)
---token chat_token.txt (путь к файлу с токеном для чата)
 --nickname Anonymous (имя пользователя, которое будет использоваться при регистрации в чате)
 --message "Hi" (сообщение для чата)
 ```
