@@ -133,3 +133,4 @@ dmypy.json
 /chat_log.txt
 /Pipfile
 /Pipfile.lock
+/chat_history.txt

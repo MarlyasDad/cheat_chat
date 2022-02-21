@@ -11,36 +11,34 @@ $ cd /path/to/cheat_chat/folder
 $ python3 -m pip install -r requirements.txt
 ```
 
-Чтобы начать читать сообщения запустите chat_reader.py
+Прежде, чем начать общаться, зарегистрируйтесь в чате. Запустите register.py и следуйте инструкциям.
 
 ```commandline
-$ python3 chat_reader.py
+$ python3 register.py
 ```
 
 Агрументы:
 
 ```commandline
 --host minechat.dvmn.org (хост для подключения)
---port 5000 (порт для подключения)
---history chat_log.txt (путь к файлу для записи чата)
+--w_port 5050 (порт для отправки сообщений)
+--log chat.log (путь к файлу для записи логов)
 ```
 
-Чтобы написать сообщение в чат запустите chat_writer.py
+Чтобы подключиться к чату запустите main.py
 
 ```commandline
-$ python3 chat_writer.py --message "Hi it's me"
+$ python3 main.py
 ```
 
---message является обязательным аргументом
-
-Аргументы:
+Агрументы:
 
 ```commandline
 --host minechat.dvmn.org (хост для подключения)
---port 5050 (порт для подключения)
---history chat_log.txt (путь к файлу для записи чата)
---nickname Anonymous (имя пользователя, которое будет использоваться при регистрации в чате)
---message "Hi" (сообщение для чата)
+--r_port 5000 (порт для чтения сообщений)
+--w_port 5050 (порт для отправки сообщений)
+--history chat_history.txt (путь к файлу для записи чата)
+--log chat.log (путь к файлу для записи логов)
 ```
 
 ### **Дополнительная информация**
